@@ -67,7 +67,7 @@ const InputBox = () => {
                     onKeyDown={handleKeyDown}
                     placeholder={isLoading ? "AI is thinking..." : "Type your message..."}
                     rows="1"
-                    className={`w-full p-3 pr-14 rounded-xl bg-gray-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 transition-height duration-200 ease-in-out scrollbar-hide ${isExpanded ? 'h-24' : 'h-12'
+                    className={`w-full p-3 pr-14 rounded-3xl bg-gray-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 transition-height duration-200 ease-in-out scrollbar-hide ${isExpanded ? 'h-24' : 'h-12'
                         }`}
                     disabled={isLoading || !state.activeSessionId}
                 />

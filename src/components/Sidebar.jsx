@@ -4,7 +4,7 @@ import ThemeToggle from './ThemeToggle';
 import Modal from './Modal';
 import { FiPlus, FiMessageSquare, FiMoreHorizontal, FiEdit2, FiTrash2, FiCheck, FiDownload } from 'react-icons/fi';
 
-const Sidebar = () => {
+const Sidebar = ({ closeSidebar }) => {
     const { state, dispatch } = useChat();
     const [openMenuId, setOpenMenuId] = useState(null);
     const [editingSessionId, setEditingSessionId] = useState(null);
@@ -15,12 +15,14 @@ const Sidebar = () => {
 
     const handleNewChat = () => {
         dispatch({ type: "CREATE_SESSION" });
+        if (closeSidebar) closeSidebar();
     };
 
     const switchSession = (sessionId) => {
-        if (editingSessionId !== sessionId) {
-            dispatch({ type: "SWITCH_SESSION", payload: sessionId });
-        }
+        // A small guard: don't do anything if we are editing this session.
+        if (editingSessionId === sessionId) return;
+        dispatch({ type: "SWITCH_SESSION", payload: sessionId });
+        if (closeSidebar) closeSidebar();
     };
 
     const startEditing = (session) => {
@@ -30,7 +32,8 @@ const Sidebar = () => {
     };
 
     const handleRename = (sessionId) => {
-        if (renameValue && renameValue.trim() !== "") {
+        // Using trim() on the value before checking if it's empty is more robust.
+        if (renameValue.trim()) {
             dispatch({
                 type: "RENAME_SESSION",
                 payload: { sessionId, newTitle: renameValue.trim() },
@@ -46,9 +49,8 @@ const Sidebar = () => {
     };
 
     const confirmDelete = () => {
-        if (sessionToDelete) {
-            dispatch({ type: "DELETE_SESSION", payload: sessionToDelete });
-        }
+        if (!sessionToDelete) return; // A small guard
+        dispatch({ type: "DELETE_SESSION", payload: sessionToDelete });
         setIsDeleteModalOpen(false);
         setSessionToDelete(null);
     };
@@ -59,33 +61,27 @@ const Sidebar = () => {
             const userMessage = session.messages[i];
             const aiMessage = session.messages[i + 1];
 
-            if (userMessage && userMessage.sender === 'user' && aiMessage && aiMessage.sender === 'ai') {
+            // Optional chaining (?.) makes this slightly safer if a message is missing
+            if (userMessage?.sender === 'user' && aiMessage?.sender === 'ai') {
                 conversationPairs.push({
                     "userMessage": userMessage.text,
                     "aiResponse": aiMessage.text
                 });
             }
         }
-
         const dataToSave = {
             id: session.id,
             title: session.title,
             timestamp: new Date().toISOString(),
             conversation: conversationPairs,
         };
-
         const jsonString = JSON.stringify(dataToSave, null, 2);
         const blob = new Blob([jsonString], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-
         link.href = url;
         link.download = `${session.title.replace(/\s+/g, '_')}_history.json`;
-
-        document.body.appendChild(link);
-        link.click();
-
-        document.body.removeChild(link);
+        link.click(); // We don't need to append/remove from the body
         URL.revokeObjectURL(url);
     };
 
@@ -102,8 +98,7 @@ const Sidebar = () => {
                 onClick={handleNewChat}
                 className="flex items-center justify-center gap-2 w-full p-2 mb-4 bg-blue-500 hover:bg-blue-600 rounded-lg text-white font-semibold transition-transform active:scale-95 shadow-md"
             >
-                <FiPlus size={18} />
-                New Chat
+                <FiPlus size={18} /> New Chat
             </button>
 
             <div className="flex-1 overflow-y-auto space-y-1 scrollbar-hide">
@@ -113,12 +108,17 @@ const Sidebar = () => {
                         <li
                             key={session.id}
                             onClick={() => switchSession(session.id)}
-                            className={`group flex items-center justify-between p-2 rounded-lg cursor-pointer text-sm text-zinc-700 dark:text-zinc-300 transition-colors relative ${editingSessionId === session.id
+                            className={`
+                                group flex items-center justify-between p-2 rounded-lg cursor-pointer 
+                                text-sm text-zinc-700 dark:text-zinc-300 
+                                transition-colors relative 
+                                ${editingSessionId === session.id
                                     ? 'bg-blue-500/10 ring-2 ring-blue-500'
                                     : state.activeSessionId === session.id
                                         ? 'bg-gray-200 dark:bg-zinc-800 font-semibold'
                                         : 'hover:bg-gray-100 dark:hover:bg-zinc-800'
-                                }`}
+                                }
+                            `}
                         >
                             <div className="flex items-center gap-3 truncate w-full">
                                 <FiMessageSquare size={16} className="flex-shrink-0" />
@@ -142,7 +142,7 @@ const Sidebar = () => {
 
                             <div className="flex items-center flex-shrink-0">
                                 {editingSessionId === session.id ? (
-                                    <button onClick={() => handleRename(session.id)} className="p-1 rounded-md text-green-500 hover:bg-zinc-700">
+                                    <button onClick={(e) => { e.stopPropagation(); handleRename(session.id); }} className="p-1 rounded-md text-green-500 hover:bg-zinc-700">
                                         <FiCheck size={16} />
                                     </button>
                                 ) : (
@@ -150,11 +150,6 @@ const Sidebar = () => {
                                         <button onClick={(e) => { e.stopPropagation(); handleDownload(session); }} className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-gray-300 dark:hover:bg-zinc-700">
                                             <FiDownload size={16} />
                                         </button>
-                                        {/* 
-                                            ========================================================================
-                                            THE FIX IS HERE: The onClick handler is now complete.
-                                            ========================================================================
-                                        */}
                                         <button onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === session.id ? null : session.id); }} className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-gray-300 dark:hover:bg-zinc-700">
                                             <FiMoreHorizontal size={16} />
                                         </button>
@@ -165,8 +160,8 @@ const Sidebar = () => {
                             {openMenuId === session.id && (
                                 <div className="absolute right-0 top-10 z-10 w-36 bg-white dark:bg-zinc-800 rounded-lg shadow-lg border border-gray-200 dark:border-zinc-700" onMouseLeave={() => setOpenMenuId(null)}>
                                     <ul>
-                                        <li><button onClick={() => startEditing(session)} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-zinc-700 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-t-lg"><FiEdit2 size={14} /> Rename</button></li>
-                                        <li><button onClick={() => promptDelete(session.id)} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-500 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-b-lg"><FiTrash2 size={14} /> Delete</button></li>
+                                        <li><button onClick={(e) => { e.stopPropagation(); startEditing(session); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-zinc-700 dark:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-t-lg"><FiEdit2 size={14} /> Rename</button></li>
+                                        <li><button onClick={(e) => { e.stopPropagation(); promptDelete(session.id); }} className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-500 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-b-lg"><FiTrash2 size={14} /> Delete</button></li>
                                     </ul>
                                 </div>
                             )}
