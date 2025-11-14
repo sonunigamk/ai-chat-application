@@ -6,7 +6,7 @@ This is a responsive, feature-rich AI chat application built with React and the 
 
 ### Live Demo
 
-[Watch the Loom Demo]()
+[Watch the Loom Demo](https://ai-chatassisten.netlify.app/)
 
 ---
 
