@@ -3,8 +3,10 @@ import { useChat } from "../context/ChatContext";
 import MessageItem from "./MessageItem";
 
 const MessageList = () => {
-    const { state } = useChat();
-    const activeSession = state.sessions.find(s => s.id === state.activeSessionId);
+    // Correctly destructuring from the new context value
+    const { sessions, activeSessionId } = useChat();
+
+    const activeSession = sessions.find(s => s.id === activeSessionId);
     const messages = activeSession ? activeSession.messages : [];
     const endOfMessagesRef = useRef(null);
 
@@ -13,9 +15,7 @@ const MessageList = () => {
     }, [messages]);
 
     return (
-        
         <div className="flex-1 overflow-y-auto scrollbar-hide">
-           
             <div className="p-6 space-y-6">
                 {messages.length === 0 ? (
                     <div className="flex justify-center items-center h-[calc(100vh-200px)]">

@@ -32,7 +32,7 @@ This is a responsive, feature-rich AI chat application built with React and the 
   - Auto-scrolling to the latest message.
   - An auto-resizing text area that grows as you type.
   - Clean, modern icons and hover effects for a professional feel.
-- **Robust State Management:** Uses `useReducer` and `useContext` for predictable and scalable state handling.
+- **Robust State Management:** Uses `useContext` for predictable and scalable state handling.
 - **Error Handling:** Gracefully handles API errors and provides user-friendly feedback.
 
 ---

@@ -1,106 +1,116 @@
-import React, { createContext, useContext, useReducer, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 
 const ChatContext = createContext();
 
-const LOCAL_STORAGE_KEY = "ai_chat_app_sessions_v1";
-
-const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
-
-const initialState = savedState 
-    ? JSON.parse(savedState)
-    : { sessions: [], activeSessionId: null };
-
-const chatReducer = (state, action) => {
-  switch (action.type) {
-    case "CREATE_SESSION": {
-      const newSession = {
-        id: `session_${Date.now()}`,
-        title: `Chat ${state.sessions.length + 1}`,
-        messages: [],
-      };
-      return {
-        ...state,
-        sessions: [...state.sessions, newSession],
-        activeSessionId: newSession.id,
-      };
-    }
-    case "SWITCH_SESSION": {
-      return { ...state, activeSessionId: action.payload };
-    }
-    case "ADD_MESSAGE": {
-      const { sessionId, message } = action.payload;
-      return {
-        ...state,
-        sessions: state.sessions.map((s) =>
-          s.id === sessionId ? { ...s, messages: [...s.messages, message] } : s
-        ),
-      };
-    }
-    case "UPDATE_LAST_MESSAGE": {
-      const { sessionId, newText } = action.payload;
-      return {
-        ...state,
-        sessions: state.sessions.map((session) => {
-          if (session.id === sessionId) {
-            const newMessages = [...session.messages];
-            const lastMessageIndex = newMessages.length - 1;
-            if (lastMessageIndex >= 0) {
-              newMessages[lastMessageIndex].text = newText;
-            }
-            return { ...session, messages: newMessages };
-          }
-          return session;
-        }),
-      };
-    }
-    case "RENAME_SESSION": {
-      const { sessionId, newTitle } = action.payload;
-      return {
-        ...state,
-        sessions: state.sessions.map((session) =>
-          session.id === sessionId ? { ...session, title: newTitle } : session
-        ),
-      };
-    }
-    case "DELETE_SESSION": {
-      const sessionIdToDelete = action.payload;
-      const remainingSessions = state.sessions.filter(
-        (session) => session.id !== sessionIdToDelete
-      );
-      let newActiveSessionId = state.activeSessionId;
-      if (state.activeSessionId === sessionIdToDelete) {
-        newActiveSessionId = remainingSessions.length > 0 ? remainingSessions[0].id : null;
-      }
-      return {
-        ...state,
-        sessions: remainingSessions,
-        activeSessionId: newActiveSessionId,
-      };
-    }
-    default:
-      return state;
-  }
-};
+const LOCAL_STORAGE_KEY = "ai_chat_app_state_v2";
 
 export const ChatProvider = ({ children }) => {
-  const [state, dispatch] = useReducer(chatReducer, initialState);
+  const [sessions, setSessions] = useState([]);
+  const [activeSessionId, setActiveSessionId] = useState(null);
   const hasInitialized = useRef(false);
 
-  useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
-  }, [state]);
+  // --- State Update Functions ---
+
+  const createSession = () => {
+    const newSession = {
+      id: `session_${Date.now()}`,
+      title: `Chat ${sessions.length + 1}`,
+      messages: [],
+    };
+    setSessions(prev => [...prev, newSession]);
+    setActiveSessionId(newSession.id);
+  };
+
+  const switchSession = (sessionId) => {
+    setActiveSessionId(sessionId);
+  };
+
+  const addMessage = (sessionId, message) => {
+    setSessions(prev =>
+      prev.map(session =>
+        session.id === sessionId
+          ? { ...session, messages: [...session.messages, message] }
+          : session
+      )
+    );
+  };
+
+  const updateLastMessage = (sessionId, newText) => {
+    setSessions(prev =>
+      prev.map(session => {
+        if (session.id === sessionId) {
+          const newMessages = [...session.messages];
+          const lastMessage = newMessages[newMessages.length - 1];
+          if (lastMessage) {
+            lastMessage.text = newText;
+          }
+          return { ...session, messages: newMessages };
+        }
+        return session;
+      })
+    );
+  };
+
+  const renameSession = (sessionId, newTitle) => {
+    setSessions(prev =>
+      prev.map(session =>
+        session.id === sessionId ? { ...session, title: newTitle } : session
+      )
+    );
+  };
+
+  const deleteSession = (sessionId) => {
+    const remainingSessions = sessions.filter(
+      session => session.id !== sessionId
+    );
+    setSessions(remainingSessions);
+
+    if (activeSessionId === sessionId) {
+      setActiveSessionId(remainingSessions.length > 0 ? remainingSessions[0].id : null);
+    }
+  };
+
+  // --- Effects for Initialization and Persistence ---
 
   useEffect(() => {
     if (!hasInitialized.current) {
       hasInitialized.current = true;
-      if (state.sessions.length === 0) {
-        dispatch({ type: "CREATE_SESSION" });
+      const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedState) {
+        const { sessions: savedSessions, activeSessionId: savedActiveId } = JSON.parse(savedState);
+        setSessions(savedSessions);
+        setActiveSessionId(savedActiveId);
+        if (savedSessions.length === 0) {
+          createSession();
+        }
+      } else {
+        createSession();
       }
     }
   }, []);
 
+  useEffect(() => {
+    //  don't save on the very first render 
+    if (hasInitialized.current) {
+      const stateToSave = { sessions, activeSessionId };
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
+    }
+  }, [sessions, activeSessionId]);
+
+  // value provided by the context 
+  const contextValue = {
+    sessions,
+    activeSessionId,
+    createSession,
+    switchSession,
+    addMessage,
+    updateLastMessage,
+    renameSession,
+    deleteSession,
+  };
+
   return (
-    <ChatContext.Provider value={{ state, dispatch }}>
+    <ChatContext.Provider value={contextValue}>
       {children}
     </ChatContext.Provider>
   );

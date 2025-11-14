@@ -17,7 +17,8 @@ const MessageItem = ({ message }) => {
                     <FaRobot size={16} className="text-white" />
                 </div>
                 <div className="max-w-2xl">
-                    <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-zinc-700 px-4 py-3 rounded-lg">
+                    <div className="flex items-center gap-1.5 px-4 py-3 rounded-lg text-white">
+                        <p className='mb-3'>Genrating</p>
                         <span className="h-1.5 w-1.5 bg-zinc-400 rounded-full animate-pulse [animation-delay:-0.3s]"></span>
                         <span className="h-1.5 w-1.5 bg-zinc-400 rounded-full animate-pulse [animation-delay:-0.15s]"></span>
                         <span className="h-1.5 w-1.5 bg-zinc-400 rounded-full animate-pulse"></span>
