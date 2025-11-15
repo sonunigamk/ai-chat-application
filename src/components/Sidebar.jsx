@@ -2,19 +2,28 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useChat } from "../context/ChatContext";
 import ThemeToggle from './ThemeToggle';
 import Modal from './Modal';
-// The import now correctly includes FiX
 import { FiPlus, FiMessageSquare, FiMoreHorizontal, FiEdit2, FiTrash2, FiCheck, FiDownload, FiX } from 'react-icons/fi';
 
 const Sidebar = ({ closeSidebar }) => {
-    // Destructure the state and functions from the context
+    // Destructure from context
     const { sessions, activeSessionId, createSession, switchSession, renameSession, deleteSession } = useChat();
 
+    // States for UI management
     const [openMenuId, setOpenMenuId] = useState(null);
     const [editingSessionId, setEditingSessionId] = useState(null);
     const [renameValue, setRenameValue] = useState("");
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [sessionToDelete, setSessionToDelete] = useState(null);
+    const [isClearAllModalOpen, setIsClearAllModalOpen] = useState(false);
     const inputRef = useRef(null);
+
+    // Handler to clear all data
+    const handleConfirmClearAll = () => {
+        // Clear all session data from browser's local storage
+        localStorage.clear();
+        // Force a page reload to reset the application state from a clean slate
+        window.location.reload();
+    };
 
     const handleNewChat = () => {
         createSession();
@@ -115,10 +124,10 @@ const Sidebar = ({ closeSidebar }) => {
                             key={session.id}
                             onClick={() => handleSwitchSession(session.id)}
                             className={`group flex items-center justify-between p-2 rounded-lg cursor-pointer text-sm text-zinc-700 dark:text-zinc-300 transition-colors relative ${editingSessionId === session.id
-                                    ? 'bg-blue-500/10 ring-2 ring-blue-500'
-                                    : activeSessionId === session.id
-                                        ? 'bg-gray-200 dark:bg-zinc-800 font-semibold'
-                                        : 'hover:bg-gray-100 dark:hover:bg-zinc-800'
+                                ? 'bg-blue-500/10 ring-2 ring-blue-500'
+                                : activeSessionId === session.id
+                                    ? 'bg-gray-200 dark:bg-zinc-800 font-semibold'
+                                    : 'hover:bg-gray-100 dark:hover:bg-zinc-800'
                                 }`}
                         >
                             <div className="flex items-center gap-3 truncate w-full">
@@ -168,11 +177,27 @@ const Sidebar = ({ closeSidebar }) => {
                     ))}
                 </ul>
             </div>
-            <div className="mt-4 border-t border-gray-200 dark:border-zinc-700 pt-3">
+
+            {/* === CHANGE IS HERE === */}
+            <div className="mt-4 border-t border-gray-200 dark:border-zinc-700 pt-3 space-y-2">
+                <button
+                    onClick={() => setIsClearAllModalOpen(true)}
+                    className="flex items-center justify-center gap-2 w-full p-2 bg-red-500/10 hover:bg-red-500/20 rounded-lg text-red-600 dark:text-red-500 font-semibold transition-colors"
+                >
+                    <FiTrash2 size={16} /> Clear All Chats
+                </button>
                 <ThemeToggle />
             </div>
+            {/* === END OF CHANGE === */}
+
+            {/* Modal for deleting a single chat */}
             <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} onConfirm={confirmDelete} title="Delete Chat">
                 Are you sure you want to permanently delete this chat? This action cannot be undone.
+            </Modal>
+
+            {/* New Modal for clearing all data */}
+            <Modal isOpen={isClearAllModalOpen} onClose={() => setIsClearAllModalOpen(false)} onConfirm={handleConfirmClearAll} title="Clear All Data">
+                Are you sure you want to permanently delete <strong>all</strong> your chat history? This action will clear everything and cannot be undone.
             </Modal>
         </div>
     );
